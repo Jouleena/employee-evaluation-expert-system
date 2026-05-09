@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fuzzy_system import evaluate_employee
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from fuzzy_system import evaluate_employee
 
 app = FastAPI()
 
@@ -10,21 +12,25 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-class EmployeeData(BaseModel):
+class EmployeeInput(BaseModel):
     attendance: float
     productivity: float
     cooperation: float
     suggestions: float
 
 @app.post("/evaluate")
-def evaluate(employee: EmployeeData):
+def evaluate(data: EmployeeInput):
     score, label = evaluate_employee(
-        employee.attendance,
-        employee.productivity,
-        employee.cooperation,
-        employee.suggestions
+        data.attendance,
+        data.productivity,
+        data.cooperation,
+        data.suggestions
     )
-    return { "score": score, "label": label}
+    return {"score": score, "label": label}
+
+@app.get("/")
+def serve_index():
+    return FileResponse("index.html")

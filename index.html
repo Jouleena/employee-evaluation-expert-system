@@ -252,7 +252,7 @@
 
 <main>
   <div class="page-title">Employee <span>Performance</span> Evaluation</div>
-  <div class="page-desc">Fuzzy Logic · Centroid Defuzzification</div>
+  <div class="page-desc"> Fuzzy Logic · Centroid Defuzzification</div>
 
   <div class="stats-row">
     <div class="stat-card">
@@ -429,6 +429,23 @@
     t.textContent = msg; t.classList.add("show");
     setTimeout(()=>t.classList.remove("show"), 3500);
   }
+
+  window.addEventListener("load", () => {
+    const preloaded = [
+      { att: 95, prod: 92, coop: 9, sugg: 8 },
+      { att: 65, prod: 62, coop: 6, sugg: 5 },
+      { att: 25, prod: 20, coop: 2, sugg: 1 },
+    ];
+    preloaded.forEach(async (emp) => {
+      addRow();
+      const id = rowCount;
+      document.getElementById(`att-${id}`).value  = emp.att;
+      document.getElementById(`prod-${id}`).value = emp.prod;
+      document.getElementById(`coop-${id}`).value = emp.coop;
+      document.getElementById(`sugg-${id}`).value = emp.sugg;
+      await runEval(id);
+    });
+  });
 </script>
 </body>
 </html>
