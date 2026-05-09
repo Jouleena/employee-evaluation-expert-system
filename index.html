@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Employee Performance Evaluation System</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f0f5ff;
+      --surface:     #ffffff;
+      --border:      #dbe4f0;
+      --border2:     #b8cce4;
+      --accent:      #1a6eff;
+      --accent-dark: #0051cc;
+      --muted:       #94a3b8;
+      --text:        #0f1923;
+      --text-dim:    #64748b;
+      --excellent:   #0070f3;
+      --good:        #7c3aed;
+      --acceptable:  #d97706;
+      --weak:        #dc2626;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 1px 4px rgba(26,110,255,0.07);
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: grid; place-items: center;
+    }
+
+    .logo-text { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: var(--text); }
+    .logo-sub  { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 7px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--accent);
+      background: rgba(26,110,255,0.07);
+      border: 1px solid rgba(26,110,255,0.2);
+      padding: 5px 12px; border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    main { padding: 40px; max-width: 1400px; margin: 0 auto; }
+
+    .page-title {
+      font-size: 28px; font-weight: 800;
+      letter-spacing: -0.02em; color: var(--text); margin-bottom: 6px;
+    }
+    .page-title span { color: var(--accent); }
+
+    .page-desc {
+      font-family: 'DM Mono', monospace; font-size: 12px;
+      color: var(--text-dim); letter-spacing: 0.05em; margin-bottom: 32px;
+    }
+
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 16px; margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: box-shadow 0.2s;
+    }
+    .stat-card:hover { box-shadow: 0 4px 14px rgba(26,110,255,0.1); }
+
+    .stat-label {
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase;
+    }
+
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+    .stat-value.blue   { color: var(--accent); }
+    .stat-value.purple { color: var(--good); }
+    .stat-value.orange { color: var(--acceptable); }
+    .stat-value.red    { color: var(--weak); }
+
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .table-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 28px; border-bottom: 1px solid var(--border);
+    }
+
+    .toolbar-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .toolbar-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-dim); margin-left: 10px; }
+
+    .btn-add {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; padding: 9px 18px;
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: background 0.15s, transform 0.15s;
+    }
+    .btn-add:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+    .table-wrap { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead tr { border-bottom: 2px solid var(--border); background: #f4f8ff; }
+
+    th {
+      font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+      color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 13px 20px; text-align: left; white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f4f8ff; }
+
+    td { padding: 13px 20px; font-size: 13px; vertical-align: middle; }
+
+    .cell-input {
+      background: #f7faff; border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+      width: 80px; padding: 6px 8px; border-radius: 6px;
+      outline: none; transition: border-color 0.15s, background 0.15s;
+      -moz-appearance: textfield;
+    }
+    .cell-input::-webkit-outer-spin-button,
+    .cell-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .cell-input:focus { border-color: var(--accent); background: #eef4ff; }
+    .cell-input.id-input { width: 70px; }
+
+    .score-cell {
+      font-family: 'DM Mono', monospace; font-size: 14px;
+      font-weight: 500; color: var(--muted);
+    }
+    .score-cell.filled { color: var(--text); font-weight: 700; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      font-weight: 500; letter-spacing: 0.06em;
+      padding: 4px 12px; border-radius: 20px; text-transform: uppercase;
+    }
+    .badge-excellent  { background: rgba(0,112,243,0.1);  color: var(--excellent); border: 1px solid rgba(0,112,243,0.25); }
+    .badge-good       { background: rgba(124,58,237,0.1); color: var(--good);       border: 1px solid rgba(124,58,237,0.25); }
+    .badge-acceptable { background: rgba(217,119,6,0.1);  color: var(--acceptable); border: 1px solid rgba(217,119,6,0.25); }
+    .badge-weak       { background: rgba(220,38,38,0.1);  color: var(--weak);       border: 1px solid rgba(220,38,38,0.25); }
+    .badge-pending    { background: #f1f5f9; color: var(--muted); border: 1px solid var(--border); }
+
+    .btn-eval {
+      background: transparent; border: 1px solid var(--border2);
+      color: var(--text-dim); font-family: 'DM Mono', monospace; font-size: 11px;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-eval:hover { border-color: var(--accent); color: var(--accent); background: rgba(26,110,255,0.06); }
+    .btn-eval:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-del {
+      background: transparent; border: none; color: var(--muted);
+      cursor: pointer; padding: 6px; border-radius: 6px; line-height: 0;
+      transition: color 0.15s, background 0.15s;
+    }
+    .btn-del:hover { color: var(--weak); background: rgba(220,38,38,0.07); }
+
+    .spinner {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-row td {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px;
+    }
+
+    #toast {
+      position: fixed; bottom: 30px; right: 30px;
+      background: #fff; border: 1px solid rgba(220,38,38,0.3);
+      color: var(--weak); font-family: 'DM Mono', monospace; font-size: 12px;
+      padding: 12px 20px; border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      opacity: 0; transform: translateY(10px);
+      transition: all 0.3s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    footer {
+      text-align: center; padding: 30px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--muted); border-top: 1px solid var(--border); margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">PerfEval</div>
+      <div class="logo-sub">Fuzzy Expert System</div>
+    </div>
+  </div>
+  <div class="status-pill">
+    <span class="status-dot"></span>
+    API Connected · localhost:8000
+  </div>
+</header>
+
+<main>
+  <div class="page-title">Employee <span>Performance</span> Evaluation</div>
+  <div class="page-desc">Fuzzy Logic · Centroid Defuzzification</div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Employees</div>
+      <div class="stat-value blue" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Excellent</div>
+      <div class="stat-value blue" id="stat-excellent">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Good</div>
+      <div class="stat-value purple" id="stat-good">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Need Attention</div>
+      <div class="stat-value orange" id="stat-attention">0</div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div>
+        <span class="toolbar-title">Employee Records</span>
+        <span class="toolbar-count" id="row-count">0 entries</span>
+      </div>
+      <button class="btn-add" onclick="addRow()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Employee
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>Attendance %</th>
+            <th>Productivity</th>
+            <th>Cooperation /10</th>
+            <th>Suggestions /10</th>
+            <th>Score /100</th>
+            <th>Evaluation</th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr class="empty-row" id="empty-row">
+            <td colspan="9">No employees added yet — click "Add Employee" to start</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>Employee Performance Expert System · Fuzzy Logic · 2026</footer>
+<div id="toast"></div>
+
+<script>
+  const API = "http://127.0.0.1:8000/evaluate";
+  let rowCount = 0;
+  const results = {};
+
+  function addRow() {
+    rowCount++;
+    const id = rowCount;
+    const tbody = document.getElementById("table-body");
+    const empty = document.getElementById("empty-row");
+    if (empty) empty.remove();
+
+    const tr = document.createElement("tr");
+    tr.id = `row-${id}`;
+    tr.innerHTML = `
+      <td><input class="cell-input id-input" type="number" min="1" placeholder="${id}" id="eid-${id}" /></td>
+      <td><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="att-${id}" /></td>
+      <td><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="prod-${id}" /></td>
+      <td><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="coop-${id}" /></td>
+      <td><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="sugg-${id}" /></td>
+      <td class="score-cell" id="score-${id}">—</td>
+      <td id="badge-${id}"><span class="badge badge-pending">Pending</span></td>
+      <td><button class="btn-eval" onclick="runEval(${id})">Evaluate</button></td>
+      <td>
+        <button class="btn-del" onclick="deleteRow(${id})" title="Remove">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    updateRowCount();
+
+    ["att","prod","coop","sugg"].forEach(prefix => {
+      document.getElementById(`${prefix}-${id}`).addEventListener("keydown", e => {
+        if (e.key === "Enter") runEval(id);
+      });
+    });
+  }
+
+  async function runEval(id) {
+    const att  = parseFloat(document.getElementById(`att-${id}`)?.value);
+    const prod = parseFloat(document.getElementById(`prod-${id}`)?.value);
+    const coop = parseFloat(document.getElementById(`coop-${id}`)?.value);
+    const sugg = parseFloat(document.getElementById(`sugg-${id}`)?.value);
+
+    if ([att,prod,coop,sugg].some(isNaN)) {
+      showToast("Please fill in all fields before evaluating."); return;
+    }
+    if (att < 0 || att > 100 || prod < 0 || prod > 100) {
+      showToast("Attendance and Productivity must be between 0 and 100."); return;
+    }
+    if (coop < 0 || coop > 10 || sugg < 0 || sugg > 10) {
+      showToast("Cooperation and Suggestions must be between 0 and 10."); return;
+    }
+
+    const btn = document.querySelector(`#row-${id} .btn-eval`);
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span>`;
+
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendance: att, productivity: prod, cooperation: coop, suggestions: sugg })
+      });
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+
+      document.getElementById(`score-${id}`).textContent = data.score.toFixed(1);
+      document.getElementById(`score-${id}`).classList.add("filled");
+      document.getElementById(`badge-${id}`).innerHTML = makeBadge(data.label);
+      results[id] = data.label;
+      updateStats();
+    } catch {
+      showToast("Could not reach API. Make sure the server is running on port 8000.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Re-evaluate";
+    }
+  }
+
+  function deleteRow(id) {
+    document.getElementById(`row-${id}`)?.remove();
+    delete results[id];
+    updateStats(); updateRowCount();
+    if (!document.querySelector("#table-body tr:not(.empty-row)")) {
+      const empty = document.createElement("tr");
+      empty.className = "empty-row"; empty.id = "empty-row";
+      empty.innerHTML = `<td colspan="9">No employees added yet — click "Add Employee" to start</td>`;
+      document.getElementById("table-body").appendChild(empty);
+    }
+  }
+
+  function makeBadge(label) {
+    const cls = {"Excellent":"badge-excellent","Good":"badge-good","Acceptable":"badge-acceptable","Weak":"badge-weak"}[label] || "badge-pending";
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function updateStats() {
+    const all = Object.values(results);
+    document.getElementById("stat-total").textContent = all.length;
+    document.getElementById("stat-excellent").textContent = all.filter(l=>l==="Excellent").length;
+    document.getElementById("stat-good").textContent = all.filter(l=>l==="Good").length;
+    document.getElementById("stat-attention").textContent = all.filter(l=>l==="Acceptable"||l==="Weak").length;
+  }
+
+  function updateRowCount() {
+    const n = document.querySelectorAll("#table-body tr:not(.empty-row)").length;
+    document.getElementById("row-count").textContent = `${n} ${n===1?"entry":"entries"}`;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 3500);
+  }
+</script>
+</body>
+</html>
