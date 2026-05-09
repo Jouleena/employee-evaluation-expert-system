@@ -1,0 +1,118 @@
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+
+# Define the fuzzy variables
+
+attendance_range   = np.arange(0, 101, 1)
+productivity_range = np.arange(0, 101, 1)
+cooperation_range  = np.arange(0, 11, 1)
+suggestions_range  = np.arange(0, 11, 1)
+performance_range  = np.arange(0, 101, 1)
+
+attendance_low    = fuzz.trapmf(attendance_range, [0, 0, 40, 60])
+attendance_medium = fuzz.trimf(attendance_range,  [40, 65, 85])
+attendance_high   = fuzz.trapmf(attendance_range, [75, 90, 100, 100])
+
+
+productivity_low    = fuzz.trapmf(productivity_range, [0, 0, 40, 55])
+productivity_medium = fuzz.trimf(productivity_range,  [45, 65, 80])
+productivity_high   = fuzz.trapmf(productivity_range, [70, 85, 100, 100])
+
+
+cooperation_weak       = fuzz.trapmf(cooperation_range, [0, 0, 3, 5])
+cooperation_acceptable = fuzz.trimf(cooperation_range,  [4, 6, 8])
+cooperation_excellent  = fuzz.trapmf(cooperation_range, [7, 9, 10, 10])
+
+
+suggestions_few    = fuzz.trapmf(suggestions_range, [0, 0, 2, 4])
+suggestions_medium = fuzz.trimf(suggestions_range,  [3, 5, 7])
+suggestions_many   = fuzz.trapmf(suggestions_range, [6, 8, 10, 10])
+
+
+performance_weak       = fuzz.trapmf(performance_range, [0, 0, 30, 45])
+performance_acceptable = fuzz.trimf(performance_range,  [35, 50, 65])
+performance_good       = fuzz.trimf(performance_range,  [55, 70, 85])
+performance_excellent  = fuzz.trapmf(performance_range, [75, 90, 100, 100])
+
+# print("Fuzzy variables and membership functions defined successfully.")
+
+# Define the rules
+def get_membership(value, mf_array, universe):
+    return float(fuzz.interp_membership(universe, mf_array, value))
+
+def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggestions_val):
+    att_low    = get_membership(attendance_val,   attendance_low,    attendance_range)
+    att_med    = get_membership(attendance_val,   attendance_medium, attendance_range)
+    att_high   = get_membership(attendance_val,   attendance_high,   attendance_range)
+
+    prod_low   = get_membership(productivity_val, productivity_low,    productivity_range)
+    prod_med   = get_membership(productivity_val, productivity_medium, productivity_range)
+    prod_high  = get_membership(productivity_val, productivity_high,   productivity_range)
+
+    coop_weak  = get_membership(cooperation_val,  cooperation_weak,       cooperation_range)
+    coop_acc   = get_membership(cooperation_val,  cooperation_acceptable, cooperation_range)
+    coop_exc   = get_membership(cooperation_val,  cooperation_excellent,  cooperation_range)
+
+    sugg_few   = get_membership(suggestions_val,  suggestions_few,    suggestions_range)
+    sugg_med   = get_membership(suggestions_val,  suggestions_medium, suggestions_range)
+    sugg_many  = get_membership(suggestions_val,  suggestions_many,   suggestions_range)
+
+   
+    r1  = min(prod_high, att_high)   
+    r2  = min(prod_high, att_med)     
+    r3  = min(prod_high, att_low)  
+    r4  = min(prod_med,  att_high)    
+    r5  = min(prod_med,  att_med)     
+    r6  = min(prod_med,  att_low)     
+    r7  = min(prod_low,  att_high)   
+    r8  = min(prod_low,  att_med)     
+    r9  = min(prod_low,  att_low)     
+
+    r10 = min(prod_high, att_low,  coop_exc,  sugg_many)  
+    r11 = min(prod_high, att_med,  coop_weak, sugg_few)    
+    r12 = min(prod_high, att_high, coop_weak, sugg_few)    
+    r13 = min(prod_low,  att_low,  coop_exc,  sugg_many)   
+    r14 = min(prod_med,  att_low,  coop_exc,  sugg_few)    
+    r15 = min(prod_med,  att_med,  coop_acc,  sugg_med)   
+    r16 = min(prod_med,  att_med,  coop_exc,  sugg_med)    
+    r17 = min(prod_med,  att_low,  coop_acc,  sugg_many)   
+    r18 = min(prod_high, att_high, coop_acc,  sugg_many)   
+    r19 = min(prod_low,  att_low,  coop_acc,  sugg_med)    
+    r20 = min(prod_med,  att_med,  coop_weak, sugg_med)    
+    r21 = min(prod_low,  att_med,  coop_weak, sugg_few)    
+
+    strength_excellent  = max(r1, r2, r4, r10, r16, r18)
+    strength_good       = max(r3, r5, r11, r12, r15, r17, r20)
+    strength_acceptable = max(r6, r7, r8, r13, r14, r19)
+    strength_weak       = max(r9, r21)
+
+    perf_weak_clipped       = np.fmin(strength_weak,       performance_weak)
+    perf_acceptable_clipped = np.fmin(strength_acceptable, performance_acceptable)
+    perf_good_clipped       = np.fmin(strength_good,       performance_good)
+    perf_excellent_clipped  = np.fmin(strength_excellent,  performance_excellent)
+
+
+    aggregated = np.fmax(perf_weak_clipped,
+                 np.fmax(perf_acceptable_clipped,
+                 np.fmax(perf_good_clipped,
+                         perf_excellent_clipped)))
+    if np.sum(aggregated) == 0:
+        score = 0.0
+    else:
+        score = fuzz.defuzz(performance_range, aggregated, 'centroid')
+
+    if score >= 75:
+        label = "Excellent"
+    elif score >= 55:
+        label = "Good"
+    elif score >= 35:
+        label = "Acceptable"
+    else:
+        label = "Weak"
+
+    return round(score, 2), label
+                                
+
+print("Fuzzy control system created successfully with the defined rules.")
