@@ -4,3 +4,4 @@ numpy
 scikit-fuzzy
 scipy
 python-multipart
+packaging
