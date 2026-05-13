@@ -21,6 +21,29 @@ def get_label_stars(label):
     }
     return stars.get(label, "")
 
+
+def print_explanation(explanation):
+    print("\n  Why this result:")
+
+    for metric, details in explanation["inputs"].items():
+        strongest = details["strongest"]
+        memberships = details["memberships"]
+        print(f"    {metric.title():<13} strongest = {strongest['term']} ({strongest['strength']:.2f})")
+        print(
+            " " * 17
+            + ", ".join(f"{term}:{value:.2f}" for term, value in memberships.items())
+        )
+
+    print("\n  Active rules:")
+    for rule in explanation["rule_strengths"][:6]:
+        print(
+            f"    {rule['id']} -> {rule['output']:<11} strength={rule['strength']:.2f} | {rule['description']}"
+        )
+
+    print("\n  Output strengths:")
+    for label, strength in explanation["output_strengths"].items():
+        print(f"    {label:<11}: {strength:.2f}")
+
 def main():
     print("=" * 50)
     print("Employee Performance Evaluation System")
@@ -36,11 +59,12 @@ def main():
     cooperation_val  = get_input("Teamwork with Colleagues  (0-10):  ", 0, 10)
     suggestions_val  = get_input("Development Suggestions (0-10): ", 0, 10)
 
-    score, label = evaluate_employee(
+    score, label, explanation = evaluate_employee(
         attendance_val,
         productivity_val,
         cooperation_val,
-        suggestions_val
+        suggestions_val,
+        explain=True
     )
 
     stars = get_label_stars(label)
@@ -55,6 +79,7 @@ def main():
     print("-" * 50)
     print(f"  Final Score:          {score} / 100")
     print(f"  Evaluation:          {label}  {stars}")
+    print_explanation(explanation)
     print("=" * 50)
 
     again = input("\nDo you want to evaluate another employee? (yes/no): ")

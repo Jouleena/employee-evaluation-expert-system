@@ -42,7 +42,12 @@ performance_excellent  = fuzz.trapmf(performance_range, [75, 90, 100, 100])
 def get_membership(value, mf_array, universe):
     return float(fuzz.interp_membership(universe, mf_array, value))
 
-def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggestions_val):
+def _strongest_membership(memberships):
+    term, strength = max(memberships.items(), key=lambda item: item[1])
+    return {"term": term, "strength": round(float(strength), 3)}
+
+
+def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggestions_val, explain=False):
     att_low    = get_membership(attendance_val,   attendance_low,    attendance_range)
     att_med    = get_membership(attendance_val,   attendance_medium, attendance_range)
     att_high   = get_membership(attendance_val,   attendance_high,   attendance_range)
@@ -58,6 +63,29 @@ def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggest
     sugg_few   = get_membership(suggestions_val,  suggestions_few,    suggestions_range)
     sugg_med   = get_membership(suggestions_val,  suggestions_medium, suggestions_range)
     sugg_many  = get_membership(suggestions_val,  suggestions_many,   suggestions_range)
+
+    memberships = {
+        "attendance": {
+            "low": att_low,
+            "medium": att_med,
+            "high": att_high,
+        },
+        "productivity": {
+            "low": prod_low,
+            "medium": prod_med,
+            "high": prod_high,
+        },
+        "cooperation": {
+            "weak": coop_weak,
+            "acceptable": coop_acc,
+            "excellent": coop_exc,
+        },
+        "suggestions": {
+            "few": sugg_few,
+            "medium": sugg_med,
+            "many": sugg_many,
+        },
+    }
 
    
     r1  = min(prod_high, att_high)   
@@ -88,6 +116,30 @@ def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggest
     strength_acceptable = max(r6, r7, r8, r13, r14, r19)
     strength_weak       = max(r9, r21)
 
+    rules = [
+        {"id": "r1",  "output": "Excellent",  "strength": r1,  "description": "High productivity and high attendance"},
+        {"id": "r2",  "output": "Excellent",  "strength": r2,  "description": "High productivity and medium attendance"},
+        {"id": "r3",  "output": "Good",       "strength": r3,  "description": "High productivity and low attendance"},
+        {"id": "r4",  "output": "Excellent",  "strength": r4,  "description": "Medium productivity and high attendance"},
+        {"id": "r5",  "output": "Good",       "strength": r5,  "description": "Medium productivity and medium attendance"},
+        {"id": "r6",  "output": "Acceptable", "strength": r6,  "description": "Medium productivity and low attendance"},
+        {"id": "r7",  "output": "Acceptable", "strength": r7,  "description": "Low productivity and high attendance"},
+        {"id": "r8",  "output": "Acceptable", "strength": r8,  "description": "Low productivity and medium attendance"},
+        {"id": "r9",  "output": "Weak",       "strength": r9,  "description": "Low productivity and low attendance"},
+        {"id": "r10", "output": "Excellent",  "strength": r10, "description": "High productivity, low attendance, excellent cooperation, many suggestions"},
+        {"id": "r11", "output": "Good",       "strength": r11, "description": "High productivity, medium attendance, weak cooperation, few suggestions"},
+        {"id": "r12", "output": "Good",       "strength": r12, "description": "High productivity, high attendance, weak cooperation, few suggestions"},
+        {"id": "r13", "output": "Acceptable", "strength": r13, "description": "Low productivity, low attendance, excellent cooperation, many suggestions"},
+        {"id": "r14", "output": "Acceptable", "strength": r14, "description": "Medium productivity, low attendance, excellent cooperation, few suggestions"},
+        {"id": "r15", "output": "Good",       "strength": r15, "description": "Medium productivity, medium attendance, acceptable cooperation, medium suggestions"},
+        {"id": "r16", "output": "Excellent",  "strength": r16, "description": "Medium productivity, medium attendance, excellent cooperation, medium suggestions"},
+        {"id": "r17", "output": "Acceptable", "strength": r17, "description": "Medium productivity, low attendance, acceptable cooperation, many suggestions"},
+        {"id": "r18", "output": "Excellent",  "strength": r18, "description": "High productivity, high attendance, acceptable cooperation, many suggestions"},
+        {"id": "r19", "output": "Acceptable", "strength": r19, "description": "Low productivity, low attendance, acceptable cooperation, medium suggestions"},
+        {"id": "r20", "output": "Good",       "strength": r20, "description": "Medium productivity, medium attendance, weak cooperation, medium suggestions"},
+        {"id": "r21", "output": "Weak",       "strength": r21, "description": "Low productivity, medium attendance, weak cooperation, few suggestions"},
+    ]
+
     perf_weak_clipped       = np.fmin(strength_weak,       performance_weak)
     perf_acceptable_clipped = np.fmin(strength_acceptable, performance_acceptable)
     perf_good_clipped       = np.fmin(strength_good,       performance_good)
@@ -111,6 +163,46 @@ def evaluate_employee(attendance_val, productivity_val, cooperation_val, suggest
         label = "Acceptable"
     else:
         label = "Weak"
+
+    explanation = {
+        "inputs": {
+            "attendance": {
+                "value": attendance_val,
+                "memberships": memberships["attendance"],
+                "strongest": _strongest_membership(memberships["attendance"]),
+            },
+            "productivity": {
+                "value": productivity_val,
+                "memberships": memberships["productivity"],
+                "strongest": _strongest_membership(memberships["productivity"]),
+            },
+            "cooperation": {
+                "value": cooperation_val,
+                "memberships": memberships["cooperation"],
+                "strongest": _strongest_membership(memberships["cooperation"]),
+            },
+            "suggestions": {
+                "value": suggestions_val,
+                "memberships": memberships["suggestions"],
+                "strongest": _strongest_membership(memberships["suggestions"]),
+            },
+        },
+        "rule_strengths": sorted(
+            [rule for rule in rules if rule["strength"] > 0],
+            key=lambda rule: rule["strength"],
+            reverse=True,
+        ),
+        "output_strengths": {
+            "Excellent": strength_excellent,
+            "Good": strength_good,
+            "Acceptable": strength_acceptable,
+            "Weak": strength_weak,
+        },
+        "score_band": label,
+    }
+
+    if explain:
+        return round(score, 2), label, explanation
 
     return round(score, 2), label
                                 

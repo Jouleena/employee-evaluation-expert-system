@@ -23,13 +23,14 @@ class EmployeeInput(BaseModel):
 
 @app.post("/evaluate")
 def evaluate(data: EmployeeInput):
-    score, label = evaluate_employee(
+    score, label, explanation = evaluate_employee(
         data.attendance,
         data.productivity,
         data.cooperation,
-        data.suggestions
+        data.suggestions,
+        explain=True
     )
-    return {"score": score, "label": label}
+    return {"score": score, "label": label, "explanation": explanation}
 
 @app.get("/")
 def serve_index():
