@@ -318,9 +318,81 @@
 
     @media (max-width: 720px) {
       header, .table-toolbar, .explain-head { flex-direction: column; align-items: flex-start; }
-      main { padding: 24px 16px; }
+      main { padding: 20px 14px 28px; }
+      .page-title { font-size: 22px; line-height: 1.15; }
+      .page-desc { margin-bottom: 22px; }
       .stats-row, .explain-grid { grid-template-columns: 1fr; }
-      .explain-body { padding: 18px 16px; }
+      .stat-card { padding: 16px 18px; }
+      .stat-value { font-size: 22px; }
+      .table-toolbar, .explain-head { gap: 12px; padding: 16px 16px; }
+      .table-wrap { overflow: visible; }
+      .table-card table,
+      .table-card thead,
+      .table-card tbody,
+      .table-card th,
+      .table-card td,
+      .table-card tr { display: block; width: 100%; }
+      .table-card thead { display: none; }
+      .table-card tbody { padding: 12px; }
+      .table-card tbody tr {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+      .table-card tbody tr:hover { background: #fff; }
+      .table-card td {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(219,228,240,0.8);
+        align-items: start;
+      }
+      .table-card td:last-child { border-bottom: none; }
+      .table-card td::before {
+        content: attr(data-label);
+        font-family: 'DM Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-dim);
+      }
+      .table-card td[data-label=""]::before { content: none; }
+      .cell-input,
+      .cell-input.id-input {
+        width: 100%;
+        min-width: 0;
+      }
+      .score-cell { font-size: 13px; }
+      .badge, .btn-eval, .btn-del { width: 100%; justify-content: center; }
+      .btn-eval, .btn-del { display: flex; align-items: center; }
+      .btn-eval, .btn-del { padding: 9px 12px; }
+      .badge { text-align: center; }
+      .explain-body { padding: 16px 14px; }
+      .summary-strip { gap: 8px; }
+      .summary-chip { width: 100%; text-align: center; }
+      .strength-row, .rule-item, .meter-row { grid-template-columns: 1fr; gap: 6px; }
+      .meter-row > div:last-child,
+      .rule-item > span:last-child,
+      .strength-row > span:last-child { text-align: left; }
+      .rule-pill,
+      .strength-pill { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      header { padding: 14px 12px; }
+      .logo-sub, .status-pill, .page-desc { font-size: 10px; }
+      .status-pill { width: 100%; justify-content: center; }
+      .page-title { font-size: 20px; }
+      .table-card tbody { padding: 10px; }
+      .table-card tbody tr { padding: 10px; }
+      .toolbar-title { font-size: 12px; }
+      .toolbar-count { font-size: 10px; }
+      .explain-section h4 { font-size: 12px; }
+      .explain-empty { font-size: 11px; }
     }
 
     .table-toolbar {
@@ -548,15 +620,15 @@
     const tr = document.createElement("tr");
     tr.id = `row-${id}`;
     tr.innerHTML = `
-      <td><input class="cell-input id-input" type="number" min="1" placeholder="${id}" id="eid-${id}" /></td>
-      <td><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="att-${id}" /></td>
-      <td><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="prod-${id}" /></td>
-      <td><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="coop-${id}" /></td>
-      <td><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="sugg-${id}" /></td>
-      <td class="score-cell" id="score-${id}">—</td>
-      <td id="badge-${id}"><span class="badge badge-pending">Pending</span></td>
-      <td><button class="btn-eval" onclick="runEval(${id})">Evaluate</button></td>
-      <td>
+      <td data-label="Employee ID"><input class="cell-input id-input" type="number" min="1" placeholder="${id}" id="eid-${id}" /></td>
+      <td data-label="Attendance %"><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="att-${id}" /></td>
+      <td data-label="Productivity"><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="prod-${id}" /></td>
+      <td data-label="Cooperation /10"><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="coop-${id}" /></td>
+      <td data-label="Suggestions /10"><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="sugg-${id}" /></td>
+      <td data-label="Score /100" class="score-cell" id="score-${id}">—</td>
+      <td data-label="Evaluation" id="badge-${id}"><span class="badge badge-pending">Pending</span></td>
+      <td data-label="Action"><button class="btn-eval" onclick="runEval(${id})">Evaluate</button></td>
+      <td data-label="Remove">
         <button class="btn-del" onclick="deleteRow(${id})" title="Remove">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
