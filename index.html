@@ -312,6 +312,18 @@
       max-width: 100%;
     }
 
+    .profile-note {
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      border: 1px solid rgba(26,110,255,0.14);
+      border-radius: 12px;
+      background: rgba(26,110,255,0.05);
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
     @media (max-width: 900px) {
       .stats-row, .explain-grid { grid-template-columns: 1fr 1fr; }
     }
@@ -411,6 +423,15 @@
       cursor: pointer; transition: background 0.15s, transform 0.15s;
     }
     .btn-add:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+    .btn-mode {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(26,110,255,0.08); color: var(--accent-dark);
+      border: 1px solid rgba(26,110,255,0.18); border-radius: 8px; padding: 9px 14px;
+      font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-mode:hover { background: rgba(26,110,255,0.12); transform: translateY(-1px); }
 
     .table-wrap { overflow-x: auto; }
 
@@ -531,7 +552,8 @@
 
 <main>
   <div class="page-title">Employee <span>Performance</span> Evaluation</div>
-  <div class="page-desc"> Fuzzy Logic · Mamdani Method · Centroid Defuzzification</div>
+  <div class="page-desc">Fuzzy Logic · Mamdani Method · Centroid Defuzzification · Role-Based Profiles</div>
+  <div class="profile-note" id="profile-note">General: balanced scoring across all inputs. Technical: slightly favors productivity and attendance. Leadership: adds proactivity.</div>
 
   <div class="stats-row">
     <div class="stat-card">
@@ -558,10 +580,22 @@
         <span class="toolbar-title">Employee Records</span>
         <span class="toolbar-count" id="row-count">0 entries</span>
       </div>
-      <button class="btn-add" onclick="addRow()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Employee
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+        <select id="profile-selector" onchange="changeProfile()" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-family:'DM Mono'; font-size:11px; font-weight:700;">
+          <option value="general">General Profile</option>
+          <option value="technical">Technical Profile</option>
+          <option value="leadership">Leadership Profile</option>
+        </select>
+        <button class="btn-mode" id="mode-toggle" onclick="toggleMode()">Mode: Corporate V2</button>
+        <button class="btn-add" onclick="exportToCSV()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+        <button class="btn-add" onclick="addRow()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Employee
+        </button>
+      </div>
     </div>
 
     <div class="table-wrap">
@@ -570,9 +604,10 @@
           <tr>
             <th>Employee ID</th>
             <th>Attendance %</th>
-            <th>Productivity</th>
+            <th>Productivity %</th>
             <th>Cooperation /10</th>
             <th>Suggestions /10</th>
+            <th id="proactivity-header" style="display:none;">Proactivity /10</th>
             <th>Score /100</th>
             <th>Evaluation</th>
             <th></th>
@@ -581,7 +616,7 @@
         </thead>
         <tbody id="table-body">
           <tr class="empty-row" id="empty-row">
-            <td colspan="9">No employees added yet — click "Add Employee" to start</td>
+            <td colspan="10">No employees added yet — click "Add Employee" to start</td>
           </tr>
         </tbody>
       </table>
@@ -600,15 +635,189 @@
       <div class="explain-empty">The system will show the strongest memberships, the rules that fired, and the output strengths here after an evaluation.</div>
     </div>
   </div>
+
+  <div class="explain-card" id="comparison-card" style="display:none; margin-top:20px;">
+    <div class="explain-head">
+      <span class="toolbar-title">Baseline vs Corporate V2 Validation</span>
+    </div>
+    <div class="explain-body" id="comparison-body">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+        <div style="border:1px solid var(--border); border-radius:10px; padding:14px; background:#f7faff;">
+          <h4 style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--text);">Baseline</h4>
+          <div id="baseline-result" style="font-family:'DM Mono'; font-size:12px; color:var(--text-dim);">Loading...</div>
+        </div>
+        <div style="border:1px solid var(--border); border-radius:10px; padding:14px; background:#f7faff;">
+          <h4 style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--text);">Corporate V2</h4>
+          <div id="corporate-result" style="font-family:'DM Mono'; font-size:12px; color:var(--text-dim);">Loading...</div>
+        </div>
+      </div>
+      <div id="chart-container" style="border:1px solid var(--border); border-radius:10px; padding:14px; background:#f7faff; text-align:center;">
+        <canvas id="ruleStrengthChart" style="max-height:300px;"></canvas>
+      </div>
+    </div>
+  </div>
 </main>
 
 <footer>Employee Performance Expert System · Fuzzy Logic · 2026</footer>
 <div id="toast"></div>
 
 <script>
-  const API = "http://127.0.0.1:8000/evaluate";
+  // Load Chart.js library
+  const chartScript = document.createElement("script");
+  chartScript.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js";
+  document.head.appendChild(chartScript);
+
+  const API = window.location.origin.startsWith("http")
+    ? `${window.location.origin}/evaluate`
+    : "http://127.0.0.1:8001/evaluate";
   let rowCount = 0;
   const results = {};
+  let evaluationMode = "corporate_v2";
+  let currentProfile = "general";
+  let lastEvalData = null;
+  let ruleChart = null;
+
+  const PROFILE_DESCRIPTIONS = {
+    general: "General: balanced scoring across all inputs.",
+    technical: "Technical: slightly favors productivity and attendance.",
+    leadership: "Leadership: reveals Proactivity and rewards initiative.",
+  };
+
+  function setProfileVisibility(profile) {
+    const visible = profile === "leadership";
+    document.getElementById("proactivity-header").hidden = !visible;
+    document.querySelectorAll("[id^='proactivity-col-']").forEach(cell => {
+      cell.hidden = !visible;
+    });
+    const profileNote = document.getElementById("profile-note");
+    if (profileNote) profileNote.textContent = PROFILE_DESCRIPTIONS[profile] || PROFILE_DESCRIPTIONS.general;
+  }
+
+  function toggleMode() {
+    evaluationMode = evaluationMode === "corporate_v2" ? "baseline" : "corporate_v2";
+    document.getElementById("mode-toggle").textContent = `Mode: ${evaluationMode === "corporate_v2" ? "Corporate V2" : "Baseline"}`;
+    showToast(`Evaluation mode switched to ${evaluationMode === "corporate_v2" ? "Corporate V2" : "Baseline"}.`);
+  }
+
+  function changeProfile() {
+    const newProfile = document.getElementById("profile-selector").value;
+    currentProfile = newProfile;
+    setProfileVisibility(newProfile);
+    showToast(`Profile switched to ${newProfile}.`);
+  }
+
+  function exportToCSV() {
+    if (Object.keys(results).length === 0) {
+      showToast("No data to export. Add and evaluate employees first.");
+      return;
+    }
+    const headers = ["Employee ID", "Attendance", "Productivity", "Cooperation", "Suggestions", "Score", "Label", "Mode"];
+    if (currentProfile === "leadership") headers.push("Proactivity");
+    const rows = Object.entries(results).map(([id, data]) => {
+      const row = [
+        id,
+        data.explanation.inputs.attendance.value,
+        data.explanation.inputs.productivity.value,
+        data.explanation.inputs.cooperation.value,
+        data.explanation.inputs.suggestions.value,
+        data.score,
+        data.label,
+        data.explanation.evaluation_mode,
+      ];
+      if (currentProfile === "leadership" && data.explanation.inputs.proactivity) {
+        row.push(data.explanation.inputs.proactivity.value);
+      }
+      return row;
+    });
+    const csv = [headers.join(","), ...rows.map(r => r.map(cell => `"${cell}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `employee_eval_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("CSV exported successfully!");
+  }
+
+  async function fetchBaselineComparison(att, prod, coop, sugg, pact) {
+    try {
+      const basePayload = { attendance: att, productivity: prod, cooperation: coop, suggestions: sugg, evaluation_mode: "baseline", profile: currentProfile };
+      if (currentProfile === "leadership" && !isNaN(pact)) basePayload.proactivity = pact;
+      const corpPayload = { attendance: att, productivity: prod, cooperation: coop, suggestions: sugg, evaluation_mode: "corporate_v2", profile: currentProfile };
+      if (currentProfile === "leadership" && !isNaN(pact)) corpPayload.proactivity = pact;
+      const baselineRes = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(basePayload)
+      });
+      const baselineData = await baselineRes.json();
+      const corporateRes = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corpPayload)
+      });
+      const corporateData = await corporateRes.json();
+      return { baseline: baselineData, corporate: corporateData };
+    } catch (e) {
+      console.error("Comparison fetch error:", e);
+      return null;
+    }
+  }
+
+  function renderComparison(baseline, corporate) {
+    const comparisonCard = document.getElementById("comparison-card");
+    const policyAdjustments = corporate.explanation.policy_adjustments || [];
+    
+    comparisonCard.style.display = "block";
+    document.getElementById("baseline-result").innerHTML = `
+      <div style="margin-bottom:8px;"><strong>Score:</strong> ${baseline.score}</div>
+      <div style="margin-bottom:8px;"><strong>Label:</strong> ${baseline.label}</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:6px;">No policy guardrails applied</div>
+    `;
+    
+    let adjustmentText = policyAdjustments.length === 0 
+      ? "No adjustments applied" 
+      : policyAdjustments.map(a => `${a.reason}`).join(" | ");
+    
+    document.getElementById("corporate-result").innerHTML = `
+      <div style="margin-bottom:8px;"><strong>Score:</strong> ${corporate.score}</div>
+      <div style="margin-bottom:8px;"><strong>Label:</strong> ${corporate.label}</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:6px;">${adjustmentText}</div>
+    `;
+
+    // Render chart
+    const chartCanvas = document.getElementById("ruleStrengthChart");
+    if (chartCanvas && window.Chart) {
+      const rules = corporate.explanation.rule_strengths.slice(0, 10);
+      const ruleIds = rules.map(r => r.id);
+      const ruleStrengths = rules.map(r => r.strength);
+      
+      if (ruleChart) ruleChart.destroy();
+      ruleChart = new Chart(chartCanvas, {
+        type: "bar",
+        data: {
+          labels: ruleIds,
+          datasets: [{
+            label: "Rule Strength",
+            data: ruleStrengths,
+            backgroundColor: "rgba(26, 110, 255, 0.6)",
+            borderColor: "rgba(26, 110, 255, 1)",
+            borderWidth: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          indexAxis: "x",
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, max: 1 } },
+        },
+      });
+    }
+  }
 
   function addRow() {
     rowCount++;
@@ -625,6 +834,7 @@
       <td data-label="Productivity"><input class="cell-input" type="number" min="0" max="100" step="0.1" placeholder="0–100" id="prod-${id}" /></td>
       <td data-label="Cooperation /10"><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="coop-${id}" /></td>
       <td data-label="Suggestions /10"><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="sugg-${id}" /></td>
+      <td id="proactivity-col-${id}" data-label="Proactivity /10" hidden><input class="cell-input" type="number" min="0" max="10"  step="0.1" placeholder="0–10"  id="pact-${id}" /></td>
       <td data-label="Score /100" class="score-cell" id="score-${id}">—</td>
       <td data-label="Evaluation" id="badge-${id}"><span class="badge badge-pending">Pending</span></td>
       <td data-label="Action"><button class="btn-eval" onclick="runEval(${id})">Evaluate</button></td>
@@ -642,6 +852,8 @@
         if (e.key === "Enter") runEval(id);
       });
     });
+
+    setProfileVisibility(currentProfile);
   }
 
   async function runEval(id) {
@@ -649,9 +861,13 @@
     const prod = parseFloat(document.getElementById(`prod-${id}`)?.value);
     const coop = parseFloat(document.getElementById(`coop-${id}`)?.value);
     const sugg = parseFloat(document.getElementById(`sugg-${id}`)?.value);
+    const pact = currentProfile === "leadership" ? parseFloat(document.getElementById(`pact-${id}`)?.value) : null;
 
     if ([att,prod,coop,sugg].some(isNaN)) {
       showToast("Please fill in all fields before evaluating."); return;
+    }
+    if (currentProfile === "leadership" && isNaN(pact)) {
+      showToast("Please fill in Proactivity for Leadership profile."); return;
     }
     if (att < 0 || att > 100 || prod < 0 || prod > 100) {
       showToast("Attendance and Productivity must be between 0 and 100."); return;
@@ -659,27 +875,37 @@
     if (coop < 0 || coop > 10 || sugg < 0 || sugg > 10) {
       showToast("Cooperation and Suggestions must be between 0 and 10."); return;
     }
+    if (currentProfile === "leadership" && (pact < 0 || pact > 10)) {
+      showToast("Proactivity must be between 0 and 10."); return;
+    }
 
     const btn = document.querySelector(`#row-${id} .btn-eval`);
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner"></span>`;
 
     try {
+      const payload = { attendance: att, productivity: prod, cooperation: coop, suggestions: sugg, evaluation_mode: evaluationMode, profile: currentProfile };
+      if (currentProfile === "leadership" && !isNaN(pact)) payload.proactivity = pact;
       const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendance: att, productivity: prod, cooperation: coop, suggestions: sugg })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
+
+      // Fetch comparison data
+      const comparisonData = await fetchBaselineComparison(att, prod, coop, sugg, pact);
 
       document.getElementById(`score-${id}`).textContent = data.score.toFixed(1);
       document.getElementById(`score-${id}`).classList.add("filled");
       document.getElementById(`badge-${id}`).innerHTML = makeBadge(data.label);
       results[id] = data;
       renderExplanation(data);
+      if (comparisonData) renderComparison(comparisonData.baseline, comparisonData.corporate);
       updateStats();
-    } catch {
+    } catch (e) {
+      console.error(e);
       showToast("Could not reach API. Make sure the server is running on port 8000.");
     } finally {
       btn.disabled = false;
@@ -694,7 +920,7 @@
     if (!document.querySelector("#table-body tr:not(.empty-row)")) {
       const empty = document.createElement("tr");
       empty.className = "empty-row"; empty.id = "empty-row";
-      empty.innerHTML = `<td colspan="9">No employees added yet — click "Add Employee" to start</td>`;
+      empty.innerHTML = `<td colspan="10">No employees added yet — click "Add Employee" to start</td>`;
       document.getElementById("table-body").appendChild(empty);
     }
   }
@@ -714,7 +940,7 @@
 
   function renderExplanation(data) {
     const body = document.getElementById("explain-body");
-    document.getElementById("explain-summary").textContent = `Score ${data.score.toFixed(1)} · ${data.label}`;
+    document.getElementById("explain-summary").textContent = `Score ${data.score.toFixed(1)} · ${data.label} · ${data.explanation.evaluation_mode}`;
     document.getElementById("explain-score-chip").textContent = `${data.label} · ${data.score.toFixed(1)}`;
 
     const inputSections = Object.entries(data.explanation.inputs).map(([name, details]) => {
@@ -763,10 +989,17 @@
       ? topRules.map(rule => `<span class="summary-chip">${rule.id} → ${rule.output} (${rule.strength.toFixed(2)})</span>`).join("")
       : '<span class="summary-chip">No rules fired</span>';
 
+    const profileAdjustments = (data.explanation.profile_adjustments || [])
+      .map(item => `<span class="summary-chip">${item.reason}</span>`)
+      .join("");
+
     body.innerHTML = `
       <div class="summary-strip">
         <span class="summary-chip">Final score: ${data.score.toFixed(2)}</span>
         <span class="summary-chip">Evaluation: ${data.label}</span>
+        <span class="summary-chip">Mode: ${data.explanation.evaluation_mode}</span>
+        <span class="summary-chip">Profile: ${currentProfile}</span>
+        ${profileAdjustments}
         <span class="summary-chip">Winning band: ${data.explanation.score_band}</span>
         ${reasonChips}
       </div>
@@ -810,6 +1043,8 @@
       document.getElementById(`sugg-${id}`).value = emp.sugg;
       await runEval(id);
     });
+
+    setProfileVisibility(currentProfile);
   });
 </script>
 </body>

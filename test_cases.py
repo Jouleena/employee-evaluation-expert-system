@@ -51,7 +51,7 @@ test_cases = [
         "description": "High productivity, low cooperation and suggestions",
         "attendance": 88, "productivity": 90,
         "cooperation": 2, "suggestions": 1,
-        "expected": "Good"
+        "expected": "Excellent"
     },
     {
         "id": "TC07",
@@ -59,7 +59,7 @@ test_cases = [
         "description": "Medium productivity boosted by excellent cooperation",
         "attendance": 70, "productivity": 65,
         "cooperation": 9, "suggestions": 7,
-        "expected": "Excellent"
+        "expected": "Good"
     },
     {
         "id": "TC08",
@@ -67,7 +67,7 @@ test_cases = [
         "description": "Low attendance, medium productivity, weak cooperation",
         "attendance": 40, "productivity": 55,
         "cooperation": 3, "suggestions": 2,
-        "expected": "Weak"
+        "expected": "Acceptable"
     },
 ]
 

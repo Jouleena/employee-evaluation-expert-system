@@ -64,7 +64,8 @@ def main():
         productivity_val,
         cooperation_val,
         suggestions_val,
-        explain=True
+        explain=True,
+        evaluation_mode="corporate_v2"
     )
 
     stars = get_label_stars(label)
