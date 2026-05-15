@@ -1,312 +1,85 @@
 Employee Performance Expert System
-Technical Documentation
-Date: May 13, 2026
+Project Documentation
+Date: May 15, 2026
 
-1. Project Overview
-This project is an employee performance evaluation expert system built with fuzzy logic. It accepts four performance indicators, evaluates them through fuzzy membership functions and rule-based inference, and produces a final performance score and label. The system is available in three interfaces:
-- a command-line application
-- a FastAPI backend
-- a browser-based user interface
+1. Executive Summary
+This repository implements an interpretable employee performance evaluation system based on fuzzy logic. The system consumes four employee metrics, applies a rule-based fuzzy inference engine, and produces a numeric score and human-readable label together with a structured explanation of the reasoning. The implementation supports three entry points: a CLI, a FastAPI backend, and a responsive browser UI.
 
-The main objective of the system is to avoid a black-box evaluation by exposing the reasoning behind the result. The project now explains:
-- which membership functions were strongest
-- which rules fired
-- how strongly each output category was supported
-- how the final result was derived
+2. Key Features
+- Transparent, auditable reasoning: returns membership values, active rules, and output strengths.
+- Reusable core: single fuzzy engine shared across CLI, API, and frontend.
+- Multiple interfaces: terminal app (`main.py`), REST API (`api.py`), and browser UI (`index.html`).
+- Test harness: predefined cases in `test_cases.py` for regression checks.
 
-2. System Architecture
-The project is organized into the following layers:
-- fuzzy_system.py: fuzzy logic definitions and evaluation engine
-- api.py: HTTP API for web-based evaluation
-- index.html: user interface for data entry and explanation display
-- main.py: command-line interface
-- test_cases.py: predefined sample cases for validation
-- requirements.txt: dependency list
+3. Architecture Overview
+The repository is structured for separation of concerns:
+- `fuzzy_system.py`: core fuzzy sets, rules, inference, and defuzzification.
+- `api.py`: FastAPI application exposing evaluation endpoints.
+- `index.html`: browser-based frontend for data entry and explanation display.
+- `main.py`: command-line interface for interactive evaluation.
+- `test_cases.py`: sample inputs and a test runner to validate behavior.
 
-Data flow:
-1. The user enters employee values.
-2. The values are passed to the fuzzy evaluator.
-3. Membership degrees are computed for all fuzzy sets.
-4. Rules are evaluated and clipped according to the inputs.
-5. Output categories are aggregated and defuzzified.
-6. The system returns a final score, label, and explanation data.
-7. The UI renders the explanation in a readable format.
+Data flow (high level): user input → fuzzy membership computation → rule evaluation → aggregation and defuzzification → result (score, label, explanation).
 
-3. fuzzy_system.py
-This file contains the core fuzzy logic engine. It defines the input universes, membership functions, output universes, rule strengths, and defuzzification logic.
+4. Fuzzy Engine (fuzzy_system.py)
+4.1 Inputs
+The evaluator accepts four inputs with these nominal ranges:
+- `attendance`: 0–100
+- `productivity`: 0–100
+- `cooperation`: 0–10
+- `suggestions`: 0–10
 
-3.1 Input variables
-The system evaluates four inputs:
-- attendance: range 0 to 100
-- productivity: range 0 to 100
-- cooperation: range 0 to 10
-- suggestions: range 0 to 10
+4.2 Membership functions
+Each input is modeled with overlapping linguistic terms (e.g., low/medium/high) using triangular and trapezoidal membership shapes to enable partial membership across terms.
 
-3.2 Fuzzy membership functions
-Each variable has linguistic labels:
-- attendance: low, medium, high
-- productivity: low, medium, high
-- cooperation: weak, acceptable, excellent
-- suggestions: few, medium, many
+4.3 Core functions
+- `get_membership(value, mf)`: computes membership degree (0–1) for a crisp input and a membership function.
+- `_strongest_membership(...)`: returns the label with the highest membership degree for explanation summaries.
+- `evaluate_employee(...)`: runs the full inference pipeline and returns `(score, label)` or `(score, label, explanation)` when `explain=True`.
 
-These membership functions are defined using trapezoidal and triangular shapes so that values can belong to multiple sets at once.
+4.4 Rule base and outputs
+The rule base encodes domain heuristics (e.g., high productivity + high attendance → Excellent). Rule activations are combined into output strengths for classes like Excellent, Good, Acceptable, and Weak, then defuzzified with the centroid method to yield a numeric score.
 
-3.3 Helper function: get_membership
-This function interpolates the membership degree for a single crisp input value against a fuzzy membership function.
-It returns a floating-point value between 0 and 1.
+5. API (api.py)
+5.1 Endpoints
+- `POST /evaluate`: accepts employee metrics, calls `evaluate_employee(..., explain=True)`, and returns `{score, label, explanation}`.
+- `GET /`: serves the frontend page.
 
-Purpose:
-- convert a numeric score into fuzzy membership strength
-- support all later rule computations
+5.2 Implementation notes
+The API uses FastAPI with CORS enabled for the browser UI. Input validation is performed by a Pydantic `EmployeeInput` model.
 
-3.4 Helper function: _strongest_membership
-This helper identifies the strongest membership term for a given metric.
-It is used only for explanation output.
+6. Frontend (index.html)
+The frontend provides a responsive dashboard for entering multiple employee records, running evaluations, and viewing explanations. Key UI components include summary statistics, per-row evaluation controls, and a detailed explanation panel that renders membership values and active rules for transparency.
 
-Purpose:
-- show the user which fuzzy set best matches each input
-- provide a concise interpretation of the input
+7. CLI (main.py)
+The terminal interface mirrors the API frontend: it prompts for metrics, displays the numeric score and label, and can print the full explanation (strongest memberships, rule activations, and output strengths) when requested.
 
-3.5 Main function: evaluate_employee
-This is the central evaluation function.
+8. Testing & Validation (test_cases.py)
+Predefined test cases exercise representative profiles; `run_tests()` prints results and a pass/fail status against expected labels. Note: some legacy test expectations (e.g., TC06–TC08) may not match the current rule set and should be reviewed when updating rules.
 
-Inputs:
-- attendance_val
-- productivity_val
-- cooperation_val
-- suggestions_val
-- explain (optional boolean)
+9. Dependencies & Setup
+Install runtime dependencies from `requirements.txt`. Typical packages:
+- `fastapi`, `uvicorn`, `numpy`, `scikit-fuzzy`, `pydantic`.
 
-Processing steps:
-1. Compute membership degrees for every linguistic term.
-2. Store these memberships in a structured explanation object.
-3. Evaluate the fuzzy rules using minimum operators for rule activation.
-4. Group rule activations into output strengths:
-   - Excellent
-   - Good
-   - Acceptable
-   - Weak
-5. Clip the output membership functions using the rule strengths.
-6. Aggregate all clipped outputs.
-7. Defuzzify the result using the centroid method.
-8. Convert the numeric score into a final label.
+Quick start (example):
+1. Create and activate a Python environment.
+2. Install dependencies: `pip install -r requirements.txt`.
+3. Run API server: `uvicorn api:app --reload`.
+4. Open `index.html` in a browser or use the CLI: `python main.py`.
 
-Output:
-- when explain is False: returns (score, label)
-- when explain is True: returns (score, label, explanation)
+10. Design Rationale
+- Explainability prioritized: the system surfaces membership degrees and rule activations so stakeholders can audit decisions.
+- Single source of truth: all interfaces invoke the same fuzzy engine to ensure consistent behavior.
 
-3.6 Rule base
-The rule base contains 21 rules.
-The first 9 rules evaluate combinations of productivity and attendance.
-The remaining rules include cooperation and suggestions to refine the result.
+11. Known Issues & Next Steps
+- Review and update legacy test expectations (TC06–TC08) to align with the active rule set.
+- Add automated unit tests for rule coverage and edge cases.
+- Consider packaging the frontend to be served statically by the API for an integrated deployment.
 
-Examples:
-- high productivity and high attendance can support Excellent
-- low productivity and low attendance can support Weak
-- medium values with acceptable cooperation can support Good or Acceptable
+12. Contact and Contribution
+For questions, bug reports, or contributions, open an issue in the project repository or contact the maintainer listed in the project header.
 
-3.7 Explanation object
-When explain=True, the function returns a structured explanation containing:
-- input values
-- membership values for each fuzzy set
-- strongest membership per input
-- individual rule strengths
-- output strengths for each final class
-- the final score band
+Change Log
+- 2026-05-15: Professionalized documentation, clarified architecture and setup instructions.
 
-This is the main feature that makes the system interpretable.
-
-4. api.py
-This file exposes the fuzzy evaluator through a FastAPI service.
-
-4.1 Application setup
-The API uses:
-- FastAPI for routing
-- CORSMiddleware to allow requests from the browser UI
-- FileResponse to serve the frontend file
-
-4.2 Data model: EmployeeInput
-This Pydantic model validates incoming JSON data.
-It expects:
-- attendance: float
-- productivity: float
-- cooperation: float
-- suggestions: float
-
-4.3 Endpoint: POST /evaluate
-This endpoint receives the employee metrics, calls evaluate_employee(..., explain=True), and returns:
-- score
-- label
-- explanation
-
-Purpose:
-- support the web interface
-- centralize evaluation logic in the backend
-
-4.4 Endpoint: GET /
-This endpoint serves the main HTML interface.
-
-5. index.html
-This file contains the browser-based user interface.
-It includes the layout, styling, and JavaScript behavior for the evaluation dashboard.
-
-5.1 Visual design
-The interface uses a modern card-based layout with:
-- a sticky header
-- summary statistics cards
-- a table-like employee entry area
-- an explanation panel
-- a toast notification system
-
-5.2 Responsive design
-The page is designed to work on mobile and desktop.
-On small screens, the table converts into card-like blocks so the content remains readable and usable.
-
-5.3 Key UI sections
-- header: project title and connection status
-- stats row: total employees, excellent, good, need attention
-- employee records: entry table for employee data
-- evaluation explanation: detailed fuzzy reasoning panel
-
-5.4 JavaScript function: addRow
-This function adds a new employee entry row to the table.
-It creates inputs for all four criteria, a score cell, a badge area, an evaluate button, and a delete button.
-
-Purpose:
-- allow multiple employee evaluations in one session
-- support dynamic row creation
-
-5.5 JavaScript function: runEval
-This function:
-- reads the user input values
-- validates ranges
-- calls the FastAPI /evaluate endpoint
-- receives score, label, and explanation
-- updates the row with the result
-- renders the explanation panel
-
-Purpose:
-- connect the frontend to the backend
-- display both result and reasoning
-
-5.6 JavaScript function: renderExplanation
-This function converts the explanation object into readable UI blocks.
-It displays:
-- each input value
-- strongest membership for each input
-- membership bars for each term
-- the strongest rules
-- the output strengths
-
-Purpose:
-- make fuzzy reasoning visible to the user
-- reduce the black-box effect
-
-5.7 JavaScript function: updateStats
-This function updates the summary cards based on the evaluated rows.
-It counts labels and refreshes the dashboard statistics.
-
-5.8 JavaScript function: deleteRow
-This function removes a row and updates the stored results and statistics.
-
-5.9 JavaScript function: makeBadge
-This function returns a styled HTML badge for the final label.
-
-5.10 JavaScript function: showToast
-This function displays temporary messages for validation errors and connection issues.
-
-6. main.py
-This file provides a terminal-based interface for the same fuzzy evaluator.
-
-6.1 Function: get_input
-This function prompts the user for numeric input and validates the range.
-It prevents invalid entries and keeps the CLI robust.
-
-6.2 Function: get_label_stars
-This function maps the final label to a star rating.
-It provides a compact visual summary of the result in the terminal.
-
-6.3 Function: print_explanation
-This function prints a formatted textual explanation of the fuzzy result.
-It includes:
-- the strongest membership for each input
-- all membership values
-- the active rules
-- the output strengths
-
-Purpose:
-- provide transparent reasoning in the terminal version
-
-6.4 Function: main
-This is the command-line entry point.
-It:
-- prompts for employee name and metric values
-- calls evaluate_employee(..., explain=True)
-- prints the final score and label
-- prints the full explanation
-- optionally repeats for another employee
-
-7. test_cases.py
-This file contains predefined sample employee profiles used for validation.
-
-7.1 test_cases list
-Each test case includes:
-- id
-- name
-- description
-- attendance
-- productivity
-- cooperation
-- suggestions
-- expected label
-
-7.2 Function: run_tests
-This function runs the evaluator across all sample cases and prints the score, label, expected result, and pass/fail status.
-
-Purpose:
-- confirm that the rule base produces consistent results
-- provide quick manual validation
-
-8. requirements.txt
-This file lists the Python dependencies required to run the project.
-Typical dependencies include:
-- fastapi
-- uvicorn
-- numpy
-- scikit-fuzzy
-- pydantic
-
-Purpose:
-- make environment setup reproducible
-- support installation on a new machine
-
-9. work_done_today.txt
-This file is a plain summary of the changes completed during the work session.
-It is not part of the runtime system.
-Its purpose is to record progress in a short human-readable format.
-
-10. Important Design Decisions
-10.1 Explainability instead of black-box behavior
-The biggest design improvement is that the system now returns the reasoning behind each result instead of only the final label.
-
-10.2 Reusable evaluation logic
-The same fuzzy engine is shared by the CLI, API, and test cases. This avoids duplicated logic and keeps the behavior consistent.
-
-10.3 Structured API response
-The API returns both numeric output and explanation data, which makes it easy for the frontend to present a user-friendly breakdown.
-
-10.4 Responsive frontend
-The browser interface adapts to narrow screens and remains usable on mobile devices.
-
-11. Validation Notes
-The evaluation engine was validated after the explanation work.
-The implementation is syntactically correct.
-However, some existing test cases do not match the current rule base:
-- TC06
-- TC07
-- TC08
-
-This appears to be a mismatch between the test expectations and the active rule set, not a regression caused by the explainability changes.
-
-12. Summary
-This project now provides a full fuzzy logic performance evaluation system with transparent reasoning, a reusable backend, a terminal application, and a responsive browser UI. The codebase was structured to make the final evaluation understandable, auditable, and easy to present to end users.
+End of document.
